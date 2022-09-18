@@ -245,7 +245,7 @@
             "value": "0.2"
         },
         "minimum_support_area": {
-            "value": "(2 + support_offset)**2"
+            "value": "(2 + support_offset)**2 if support_structure == 'normal' else 0"
         },
         "support_interface_skip_height": {
             "value": "layer_height"

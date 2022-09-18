@@ -126,7 +126,7 @@
         "support_interface_enable": { "value": "True" },
         "support_interface_density": { "value": 70 },
         "minimum_interface_area": { "value": 5.0 },
-        "minimum_support_area": { "value": 5 },
+        "minimum_support_area": { "value": 5 if support_structure == 'normal' else 0 },
         "support_brim_enable": { "value": "True" },
         "support_brim_width": { "value": 4 },
         "support_xy_distance": { "value": "wall_line_width_0 * 2" },
