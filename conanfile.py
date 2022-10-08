@@ -7,7 +7,7 @@ from conan import ConanFile
 from conan.tools.files import copy, rmdir, save
 from conan.tools.env import VirtualRunEnv, Environment
 from conan.tools.scm import Version
-from conan.errors import ConanInvalidConfiguration
+from conan.errors import ConanInvalidConfiguration, ConanException
 
 required_conan_version = ">=1.50.0"
 
@@ -35,6 +35,7 @@ class CuraConan(ConanFile):
         "devtools": [True, False],  # FIXME: Split this up in testing and (development / build (pyinstaller) / system installer) tools
         "cloud_api_version": "ANY",
         "display_name": "ANY",  # TODO: should this be an option??
+        "extra_build_version": "ANY",  #FIXME?: can't retrieve this from github workflow, so have an option to do it 'manually'
         "cura_debug_mode": [True, False],  # FIXME: Use profiles
         "internal": [True, False]
     }
@@ -44,6 +45,7 @@ class CuraConan(ConanFile):
         "devtools": False,
         "cloud_api_version": "1",
         "display_name": "Ultimaker Cura",
+        "extra_build_version": "",
         "cura_debug_mode": False,  # Not yet implemented
         "internal": False,
     }
@@ -149,10 +151,17 @@ class CuraConan(ConanFile):
         with open(Path(__file__).parent.joinpath("CuraVersion.py.jinja"), "r") as f:
             cura_version_py = Template(f.read())
 
-        cura_version = self.conf.get("user.cura:version", default = self.version, check_type = str)
+        cura_version = self.conf_info.get("user.cura:version", default = self.version, check_type = str)
+        version = Version(cura_version)
+        prerelease = ""
+        if self.options.extra_build_version != "":
+            prerelease = self.options.extra_build_version
         if self.options.internal:
-            version = Version(cura_version)
-            cura_version = f"{version.major}.{version.minor}.{version.patch}-{version.prerelease.replace('+', '+internal_')}"
+            prerelease = version.prerelease.replace('+', '+internal_')
+        if prerelease != "":
+            cura_version = f"{version.major}.{version.minor}.{version.patch}-{prerelease}"
+        else:
+            cura_version = f"{version.major}.{version.minor}.{version.patch}"
 
         with open(Path(location, "CuraVersion.py"), "w") as f:
             f.write(cura_version_py.render(
@@ -199,20 +208,25 @@ class CuraConan(ConanFile):
             else:
                 continue
             if not src_path.exists():
+                self.output.warning(f"Source path for binary {binary['binary']} does not exist")
                 continue
-            for bin in src_path.glob(binary["binary"] + ".*[exe|dll|so|dylib]"):
+
+            for bin in src_path.glob(binary["binary"] + "*[.exe|.dll|.so|.dylib|.so.]*"):
                 binaries.append((str(bin), binary["dst"]))
             for bin in src_path.glob(binary["binary"]):
                 binaries.append((str(bin), binary["dst"]))
 
-        for _, dependency in self.dependencies.items():
+        # Make sure all Conan dependencies which are shared are added to the binary list for pyinstaller
+        for _, dependency in self.dependencies.host.items():
             for bin_paths in dependency.cpp_info.bindirs:
                 binaries.extend([(f"{p}", ".") for p in Path(bin_paths).glob("**/*.dll")])
-                binaries.extend([(f"{p}", ".") for p in Path(bin_paths).glob("**/*.dylib")])
-                binaries.extend([(f"{p}", ".") for p in Path(bin_paths).glob("**/*.so")])
+            for lib_paths in dependency.cpp_info.libdirs:
+                binaries.extend([(f"{p}", ".") for p in Path(lib_paths).glob("**/*.so*")])
+                binaries.extend([(f"{p}", ".") for p in Path(lib_paths).glob("**/*.dylib*")])
 
         # Copy dynamic libs from lib path
-        binaries.extend([(f"{p}", ".") for p in Path(self._base_dir.joinpath("lib")).glob("**/*.dylib")])
+        binaries.extend([(f"{p}", ".") for p in Path(self._base_dir.joinpath("lib")).glob("**/*.dylib*")])
+        binaries.extend([(f"{p}", ".") for p in Path(self._base_dir.joinpath("lib")).glob("**/*.so*")])
 
         # Collect all dll's from PyQt6 and place them in the root
         binaries.extend([(f"{p}", ".") for p in Path(self._site_packages, "PyQt6", "Qt6").glob("**/*.dll")])
@@ -220,7 +234,7 @@ class CuraConan(ConanFile):
         with open(Path(__file__).parent.joinpath("Ultimaker-Cura.spec.jinja"), "r") as f:
             pyinstaller = Template(f.read())
 
-        version = self.conf.get("user.cura:version", default = self.version, check_type = str)
+        version = self.conf_info.get("user.cura:version", default = self.version, check_type = str)
         cura_version = Version(version)
 
         with open(Path(location, "Ultimaker-Cura.spec"), "w") as f:
@@ -255,7 +269,7 @@ class CuraConan(ConanFile):
         self.options["cpython"].shared = True
 
     def validate(self):
-        version = self.conf.get("user.cura:version", default = self.version, check_type = str)
+        version = self.conf_info.get("user.cura:version", default = self.version, check_type = str)
         if version and Version(version) <= Version("4"):
             raise ConanInvalidConfiguration("Only versions 5+ are support")
 
@@ -383,7 +397,7 @@ class CuraConan(ConanFile):
         self.copy("*.txt", src = self.cpp_info.resdirs[-1], dst = self._base_dir.joinpath("pip_requirements"))
 
         # Generate the GitHub Action version info Environment
-        version = self.conf.get("user.cura:version", default = self.version, check_type = str)
+        version = self.conf_info.get("user.cura:version", default = self.version, check_type = str)
         cura_version = Version(version)
         env_prefix = "Env:" if self.settings.os == "Windows" else ""
         activate_github_actions_version_env = Template(r"""echo "CURA_VERSION_MAJOR={{ cura_version_major }}" >> ${{ env_prefix }}GITHUB_ENV
