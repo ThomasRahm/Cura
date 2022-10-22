@@ -10,15 +10,15 @@
 # requirements (use the <dep_name>/(latest)@ultimaker/testing)
 #
 # Subject to change in the future!
-"5.3.0-alpha":
+"5.2.1":
     requirements:
-        - "pyarcus/(latest)@ultimaker/testing"
-        - "curaengine/(latest)@ultimaker/testing"
-        - "pysavitar/(latest)@ultimaker/testing"
-        - "pynest2d/(latest)@ultimaker/testing"
-        - "uranium/(latest)@ultimaker/testing"
-        - "fdm_materials/(latest)@ultimaker/testing"
-        - "cura_binary_data/(latest)@ultimaker/testing"
+        - "pyarcus/5.2.0"
+        - "curaengine/5.2.1"
+        - "pysavitar/5.2.0"
+        - "pynest2d/5.2.0"
+        - "uranium/5.2.0"
+        - "fdm_materials/5.2.0"
+        - "cura_binary_data/5.2.1"
         - "cpython/3.10.4"
     internal_requirements:
         - "fdm_materials_private/(latest)@ultimaker/testing"
