@@ -14,7 +14,7 @@ Item
     id: base
     width: childrenRect.width
     height: childrenRect.height
-    property var allCategoriesExceptSupport: [ "machine_settings", "resolution", "shell", "infill", "material", "speed",
+    property var allCategoriesExceptSupport: [ "machine_settings", "resolution", "shell", "infill", "material", "speed", "top_bottom",
                                     "travel", "cooling", "platform_adhesion", "dual", "meshfix", "blackmagic", "experimental"]
 
     readonly property string normalMeshType: ""
@@ -22,6 +22,11 @@ Item
     readonly property string cuttingMeshType: "cutting_mesh"
     readonly property string infillMeshType: "infill_mesh"
     readonly property string antiOverhangMeshType: "anti_overhang_mesh"
+    readonly property string antiSupportMeshType: "anti_support_mesh"
+    readonly property string sideCradleMeshType: "side_cradle_mesh"
+    readonly property string supportMeshDropType: "support_mesh_drop_down"
+
+
 
     property var currentMeshType: UM.Controller.properties.getValue("MeshType")
 
@@ -42,16 +47,23 @@ Item
                 break
             }
         }
-        visibility_handler.addSkipResetSetting(currentMeshType)
+        visibility_handler.addSkipResetSetting(supportMeshType)
+        visibility_handler.addSkipResetSetting(supportMeshDropType)
+        visibility_handler.addSkipResetSetting(cuttingMeshType)
+        visibility_handler.addSkipResetSetting(infillMeshType)
+        visibility_handler.addSkipResetSetting(antiOverhangMeshType)
+        visibility_handler.addSkipResetSetting(antiSupportMeshType)
+        visibility_handler.addSkipResetSetting(sideCradleMeshType)
+
     }
 
     function updateMeshTypeCheckedState(type)
     {
         // set checked state of mesh type buttons
         normalButton.checked = type === normalMeshType
-        supportMeshButton.checked = type === supportMeshType
+        supportMeshButton.checked = type === supportMeshType || type === supportMeshDropType
         overlapMeshButton.checked = type === infillMeshType || type === cuttingMeshType
-        antiOverhangMeshButton.checked = type === antiOverhangMeshType
+        antiOverhangMeshButton.checked = type === antiOverhangMeshType || type === antiSupportMeshType || type === sideCradleMeshType
     }
 
     function setMeshType(type)
@@ -101,7 +113,7 @@ Item
                 }
                 property bool needBorder: true
                 checkable:true
-                onClicked: setMeshType(supportMeshType)
+                onClicked: setMeshType(supportMeshDropType)
                 z: 3
             }
 
@@ -123,7 +135,7 @@ Item
             UM.ToolbarButton
             {
                 id: antiOverhangMeshButton
-                text:  catalog.i18nc("@label", "Don't support overlaps")
+                text:  catalog.i18nc("@label", "Modify Support Behavior")
                 toolItem: UM.ColorImage
                 {
                     source: UM.Theme.getIcon("BlockSupportOverlaps")
@@ -143,7 +155,75 @@ Item
             height: UM.Theme.getSize("setting").height
         }
 
+        Cura.ComboBox
+        {
+            id: supportComboBox
+            width: parent.width - UM.Theme.getSize("default_margin").width
+            height: UM.Theme.getSize("setting_control").height
+            textRole: "text"
+            forceHighlight: base.hovered
 
+            model: ListModel
+            {
+                id: supportComboBoxModel
+
+                Component.onCompleted: {
+                    append({ text: catalog.i18nc("@item:inlistbox", "Print as support & drop it down") })
+                    append({ text: catalog.i18nc("@item:inlistbox", "Print as support only") })
+                }
+            }
+
+            visible: currentMeshType === supportMeshType || currentMeshType === supportMeshDropType
+
+
+            onActivated:
+            {
+                setMeshType(index === 0 ? supportMeshDropType : supportMeshType);
+            }
+
+            Binding
+            {
+                target: supportComboBox
+                property: "currentIndex"
+                value: currentMeshType === supportMeshDropType ? 0 : 1
+            }
+        }
+
+        Cura.ComboBox
+        {
+            id: supportModifierComboBox
+            width: parent.width - UM.Theme.getSize("default_margin").width
+            height: UM.Theme.getSize("setting_control").height
+            textRole: "text"
+            forceHighlight: base.hovered
+
+            model: ListModel
+            {
+                id: supportModifierComboBoxModel
+
+                Component.onCompleted: {
+                    append({ text: catalog.i18nc("@item:inlistbox", "Don't support overlapping overhangs") })
+                    append({ text: catalog.i18nc("@item:inlistbox", "Prevent support through area") })
+                    append({ text: catalog.i18nc("@item:inlistbox", "Place support cradle around overlap") })
+                }
+            }
+
+            visible: currentMeshType === antiOverhangMeshType || currentMeshType === antiSupportMeshType || currentMeshType === sideCradleMeshType
+
+
+            onActivated:
+            {
+                setMeshType(index === 0 ? antiOverhangMeshType : (index === 1 ? antiSupportMeshType : sideCradleMeshType));
+            }
+
+            Binding
+            {
+                target: supportModifierComboBox
+                property: "currentIndex"
+                value: currentMeshType === antiOverhangMeshType ? 0 : (currentMeshType === antiSupportMeshType ? 1 : 2)
+            }
+        }
+        
         Cura.ComboBox
         {
             id: infillOnlyComboBox
@@ -185,7 +265,7 @@ Item
             id: currentSettings
             property int maximumHeight: 200 * screenScaleFactor
             height: Math.min(contents.count * (UM.Theme.getSize("section").height + UM.Theme.getSize("narrow_margin").height + UM.Theme.getSize("default_lining").height), maximumHeight)
-            visible: currentMeshType != "anti_overhang_mesh"
+            visible: currentMeshType !== antiOverhangMeshType && currentMeshType !== antiSupportMeshType && currentMeshType !== sideCradleMeshType
 
             ListView
             {
@@ -212,9 +292,9 @@ Item
                     }
                     exclude:
                     {
-                        const excluded_settings = ["support_mesh", "anti_overhang_mesh", "cutting_mesh", "infill_mesh"]
+                        var excluded_settings = ["support_mesh", "anti_overhang_mesh", "cutting_mesh", "infill_mesh", "side_cradle_mesh", "anti_support_mesh", "support_mesh_drop_down"]
 
-                        if (currentMeshType === "support_mesh")
+                        if (currentMeshType === supportMeshType || currentMeshType === supportMeshDropType)
                         {
                             excluded_settings = excluded_settings.concat(base.allCategoriesExceptSupport)
                         }
@@ -423,7 +503,7 @@ Item
             onClicked:
             {
                 settingPickDialog.visible = true;
-                if (currentMeshType === "support_mesh")
+                if (currentMeshType === supportMeshType || currentMeshType === supportMeshDropType)
                 {
                     settingPickDialog.additional_excluded_settings = base.allCategoriesExceptSupport;
                 }

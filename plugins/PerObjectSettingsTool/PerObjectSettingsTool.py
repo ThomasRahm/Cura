@@ -79,6 +79,8 @@ class PerObjectSettingsTool(Tool):
         if old_mesh_type == mesh_type:
             return False
 
+        main_type = self.getMainType(mesh_type)
+        sub_type = "" if mesh_type == main_type else mesh_type
         selected_object = Selection.getSelectedObject(0)
         if selected_object is None:
             Logger.log("w", "Tried setting the mesh type of the selected object, but no object was selected")
@@ -91,18 +93,30 @@ class PerObjectSettingsTool(Tool):
 
         settings_visibility_changed = False
         settings = stack.getTop()
+
         for property_key in ["infill_mesh", "cutting_mesh", "support_mesh", "anti_overhang_mesh"]:
-            if property_key != mesh_type:
+            if property_key != main_type:
                 if settings.getInstance(property_key):
                     settings.removeInstance(property_key)
             else:
-                if not (settings.getInstance(property_key) and settings.getProperty(property_key, "value")):
+                if not (settings.getInstance(property_key) and settings.getProperty(property_key, "value")):                        
                     definition = stack.getSettingDefinition(property_key)
                     new_instance = SettingInstance(definition, settings)
                     new_instance.setProperty("value", True)
                     new_instance.resetState()  # Ensure that the state is not seen as a user state.
                     settings.addInstance(new_instance)
-
+                    
+        for property_key in ["support_mesh_drop_down", "anti_support_mesh", "side_cradle_mesh"]:
+            if property_key != sub_type:
+                if settings.getInstance(property_key):
+                    settings.removeInstance(property_key)
+            else:
+                if not (settings.getInstance(property_key) and settings.getProperty(property_key, "value")):                        
+                    definition = stack.getSettingDefinition(property_key)
+                    new_instance = SettingInstance(definition, settings)
+                    new_instance.setProperty("value", True)
+                    new_instance.resetState()  # Ensure that the state is not seen as a user state.
+                    settings.addInstance(new_instance)
         # Override some settings to ensure that the infill mesh by default adds no skin or walls. Or remove them if not an infill mesh.
         specialized_settings = {
             "top_bottom_thickness": 0,
@@ -113,6 +127,7 @@ class PerObjectSettingsTool(Tool):
             "wall_thickness": 0,
             "wall_line_count": "=max(1, round((wall_thickness - wall_line_width_0) / wall_line_width_x) + 1) if wall_thickness != 0 else 0"
         }
+
         for property_key in specialized_settings:
             if mesh_type == "infill_mesh":
                 if settings.getInstance(property_key) is None:
@@ -140,12 +155,18 @@ class PerObjectSettingsTool(Tool):
             return ""
 
         settings = stack.getTop()
-        for property_key in ["infill_mesh", "cutting_mesh", "support_mesh", "anti_overhang_mesh"]:
+        for property_key in ["infill_mesh", "cutting_mesh", "support_mesh_drop_down", "anti_support_mesh", "side_cradle_mesh", "anti_overhang_mesh", "support_mesh"]: # main types that have sub types last
             if settings.getInstance(property_key) and settings.getProperty(property_key, "value"):
                 return property_key
 
         return ""
-
+        
+    def getMainType(self, mesh_type: str) -> str:
+        for property_key in ["side_cradle_mesh", "anti_support_mesh", "support_mesh_drop_down"]:
+            if property_key == mesh_type:
+                return {"side_cradle_mesh" : "anti_overhang_mesh", "anti_support_mesh" : "anti_overhang_mesh", "support_mesh_drop_down" : "support_mesh"}[mesh_type]
+        return mesh_type
+    
     def _onGlobalContainerChanged(self):
         global_container_stack = Application.getInstance().getGlobalContainerStack()
         if global_container_stack:
