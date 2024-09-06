@@ -7695,9 +7695,9 @@
                     "settable_per_meshgroup": false,
                     "settable_globally": false
                 },
-                "side_cradle_mesh":
+                "cradle_modifier_mesh":
                 {
-                    "label": "Support Cradle Mesh",
+                    "label": "Support Cradle Modifier Mesh",
                     "description": "Use this mesh to enforce support at the sides of any model overlapping with this area.",
                     "type": "bool",
                     "default_value": false,

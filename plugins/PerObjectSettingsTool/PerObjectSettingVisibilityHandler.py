@@ -61,7 +61,6 @@ class PerObjectSettingVisibilityHandler(UM.Settings.Models.SettingVisibilityHand
         settings = self._stack.getTop()
         all_instances = settings.findInstances()
         visibility_changed = False  # Flag to check if at the end the signal needs to be emitted
-
         # Remove all SettingInstances that are not in visibility list
         for instance in all_instances:
             # exceptionally skip setting
@@ -70,7 +69,6 @@ class PerObjectSettingVisibilityHandler(UM.Settings.Models.SettingVisibilityHand
             if instance.definition.key not in visible:
                 settings.removeInstance(instance.definition.key)
                 visibility_changed = True
-
         # Add all SettingInstances that are not added, but are in visibility list
         for item in visible:
             if settings.getInstance(item) is not None:  # Setting was added already.

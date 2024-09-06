@@ -23,7 +23,7 @@ Item
     readonly property string infillMeshType: "infill_mesh"
     readonly property string antiOverhangMeshType: "anti_overhang_mesh"
     readonly property string antiSupportMeshType: "anti_support_mesh"
-    readonly property string sideCradleMeshType: "side_cradle_mesh"
+    readonly property string cradleModifierMeshType: "cradle_modifier_mesh"
     readonly property string supportMeshDropType: "support_mesh_drop_down"
 
 
@@ -53,8 +53,7 @@ Item
         visibility_handler.addSkipResetSetting(infillMeshType)
         visibility_handler.addSkipResetSetting(antiOverhangMeshType)
         visibility_handler.addSkipResetSetting(antiSupportMeshType)
-        visibility_handler.addSkipResetSetting(sideCradleMeshType)
-
+        visibility_handler.addSkipResetSetting(cradleModifierMeshType)
     }
 
     function updateMeshTypeCheckedState(type)
@@ -63,13 +62,13 @@ Item
         normalButton.checked = type === normalMeshType
         supportMeshButton.checked = type === supportMeshType || type === supportMeshDropType
         overlapMeshButton.checked = type === infillMeshType || type === cuttingMeshType
-        antiOverhangMeshButton.checked = type === antiOverhangMeshType || type === antiSupportMeshType || type === sideCradleMeshType
+        antiOverhangMeshButton.checked = type === antiOverhangMeshType || type === antiSupportMeshType || type === cradleModifierMeshType
     }
 
     function setMeshType(type)
     {
         UM.Controller.setProperty("MeshType", type)
-        updateMeshTypeCheckedState(type)
+        updateMeshTypeCheckedState(currentMeshType)
     }
 
     UM.I18nCatalog { id: catalog; name: "cura"}
@@ -208,12 +207,12 @@ Item
                 }
             }
 
-            visible: currentMeshType === antiOverhangMeshType || currentMeshType === antiSupportMeshType || currentMeshType === sideCradleMeshType
+            visible: currentMeshType === antiOverhangMeshType || currentMeshType === antiSupportMeshType || currentMeshType === cradleModifierMeshType
 
 
             onActivated:
             {
-                setMeshType(index === 0 ? antiOverhangMeshType : (index === 1 ? antiSupportMeshType : sideCradleMeshType));
+                setMeshType(index === 0 ? antiOverhangMeshType : (index === 1 ? antiSupportMeshType : cradleModifierMeshType));
             }
 
             Binding
@@ -265,7 +264,7 @@ Item
             id: currentSettings
             property int maximumHeight: 200 * screenScaleFactor
             height: Math.min(contents.count * (UM.Theme.getSize("section").height + UM.Theme.getSize("narrow_margin").height + UM.Theme.getSize("default_lining").height), maximumHeight)
-            visible: currentMeshType !== antiOverhangMeshType && currentMeshType !== antiSupportMeshType && currentMeshType !== sideCradleMeshType
+            visible: currentMeshType !== antiOverhangMeshType && currentMeshType !== antiSupportMeshType && currentMeshType !== cradleModifierMeshType
 
             ListView
             {
@@ -292,7 +291,7 @@ Item
                     }
                     exclude:
                     {
-                        var excluded_settings = ["support_mesh", "anti_overhang_mesh", "cutting_mesh", "infill_mesh", "side_cradle_mesh", "anti_support_mesh", "support_mesh_drop_down"]
+                        var excluded_settings = ["support_mesh", "anti_overhang_mesh", "cutting_mesh", "infill_mesh", "cradle_modifier_mesh", "anti_support_mesh", "support_mesh_drop_down"]
 
                         if (currentMeshType === supportMeshType || currentMeshType === supportMeshDropType)
                         {
